@@ -21,15 +21,28 @@ import org.apache.cordova.CordovaWebView
 import org.apache.cordova.PluginResult
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.URI
+import android.util.Log
 
 class OSInAppBrowser: CordovaPlugin() {
     private var engine: OSIABEngine? = null
     private var activeRouter: OSIABRouter<Boolean>? = null
     private val gson by lazy { Gson() }
 
+    /**
+     * Comma-separated list of allowed domains read from the 'AllowedDomains' preference.
+     * When empty, all domains are permitted (backwards-compatible default).
+     */
+    private var allowedDomains: List<String> = emptyList()
+
     override fun initialize(cordova: CordovaInterface, webView: CordovaWebView) {
         super.initialize(cordova, webView)
         this.engine = OSIABEngine()
+        val rawPreference = preferences.getString("AllowedDomains", "").orEmpty()
+        allowedDomains = rawPreference
+            .split(",")
+            .map { it.trim().lowercase() }
+            .filter { it.isNotEmpty() }
     }
 
     override fun execute(
@@ -72,6 +85,11 @@ class OSInAppBrowser: CordovaPlugin() {
             return
         }
 
+        if (!isUrlAllowed(url)) {
+            sendError(callbackContext, OSInAppBrowserError.DomainNotAllowed(url))
+            return
+        }
+
         try {
             val externalBrowserRouter = OSIABExternalBrowserRouterAdapter(cordova.context)
 
@@ -105,6 +123,11 @@ class OSInAppBrowser: CordovaPlugin() {
         }
         catch (e: Exception) {
             sendError(callbackContext, OSInAppBrowserError.InputArgumentsIssue(OSInAppBrowserTarget.SYSTEM_BROWSER))
+            return
+        }
+
+        if (!isUrlAllowed(url)) {
+            sendError(callbackContext, OSInAppBrowserError.DomainNotAllowed(url))
             return
         }
 
@@ -155,6 +178,11 @@ class OSInAppBrowser: CordovaPlugin() {
         }
         catch (e: Exception) {
             sendError(callbackContext, OSInAppBrowserError.InputArgumentsIssue(OSInAppBrowserTarget.WEB_VIEW))
+            return
+        }
+
+        if (!isUrlAllowed(url)) {
+            sendError(callbackContext, OSInAppBrowserError.DomainNotAllowed(url))
             return
         }
 
@@ -214,6 +242,29 @@ class OSInAppBrowser: CordovaPlugin() {
                 callback(success)
             }
         } ?: callback(false)
+    }
+
+    /**
+     * Checks whether the given URL is allowed based on the 'AllowedDomains' preference.
+     * If the allowed domains list is empty, all URLs are permitted.
+     * Matching supports exact domain and subdomain (e.g. "outsystems.com" also allows "docs.outsystems.com").
+     * @param url The URL string to validate.
+     * @return true if the URL is allowed, false otherwise.
+     */
+    private fun isUrlAllowed(url: String): Boolean {
+        if (allowedDomains.isEmpty()) return true
+        val isAllowed = try {
+            val host = URI(url).host?.lowercase() ?: return false
+            allowedDomains.any { allowed ->
+                host == allowed || host.endsWith(".$allowed")
+            }
+        } catch (e: Exception) {
+            false
+        }
+        if (!isAllowed) {
+            Log.w("OSInAppBrowser", "Access blocked to URL '$url'. The domain is not in the AllowedDomains list.")
+        }
+        return isAllowed
     }
 
     /**

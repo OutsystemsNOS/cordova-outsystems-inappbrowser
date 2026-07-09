@@ -15,6 +15,11 @@ sealed class OSInAppBrowserError(val code: String, val message: String) {
         code = 12.formatErrorCode(),
         message = "There's no browser view to close."
     )
+
+    data class DomainNotAllowed(val url: String) : OSInAppBrowserError(
+        code = 13.formatErrorCode(),
+        message = "The URL '$url' cannot be opened because its domain is not in the AllowedDomains list."
+    )
 }
 
 enum class OSInAppBrowserTarget(

@@ -9,9 +9,22 @@ class OSInAppBrowser: CDVPlugin {
     /// The native library's main class
     private var plugin: OSInAppBrowserEngine?
     private var openedViewController: UIViewController?
+
+    /**
+     Comma-separated list of allowed domains read from the 'AllowedDomains' preference.
+     When empty, all domains are permitted (backwards-compatible default).
+     Matching supports exact domain and subdomains (e.g. "outsystems.com" also allows "docs.outsystems.com").
+     */
+    private var allowedDomains: [String] = []
     
     override func pluginInitialize() {
         self.plugin = .init()
+        // Cordova normalises preference keys to lowercase
+        let rawPreference = (self.commandDelegate.settings["alloweddomains"] as? String) ?? ""
+        allowedDomains = rawPreference
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            .filter { !$0.isEmpty }
     }
     
     @objc(openInExternalBrowser:)
@@ -26,6 +39,10 @@ class OSInAppBrowser: CDVPlugin {
                 let url = URL(string: argumentsModel.url)
             else {
                 return self.send(error: .inputArgumentsIssue(target: target), for: command.callbackId)
+            }
+
+            guard self.isUrlAllowed(url) else {
+                return self.send(error: .domainNotAllowed(url: url.absoluteString), for: command.callbackId)
             }
             
             delegateExternalBrowser(url, command.callbackId)
@@ -52,6 +69,10 @@ class OSInAppBrowser: CDVPlugin {
                 let url = URL(string: argumentsModel.url)
             else {
                 return self.send(error: .inputArgumentsIssue(target: target), for: command.callbackId)
+            }
+
+            guard self.isUrlAllowed(url) else {
+                return self.send(error: .domainNotAllowed(url: url.absoluteString), for: command.callbackId)
             }
                         
             delegateSystemBrowser(url, argumentsModel.toSystemBrowserOptions())
@@ -92,6 +113,10 @@ class OSInAppBrowser: CDVPlugin {
                 return self.send(error: .inputArgumentsIssue(target: target), for: command.callbackId)
             }
 
+            guard self.isUrlAllowed(url) else {
+                return self.send(error: .domainNotAllowed(url: url.absoluteString), for: command.callbackId)
+            }
+
             delegateWebView(url, argumentsModel.toWebViewOptions())
         }
     }
@@ -127,6 +152,28 @@ private extension OSInAppBrowser {
                 }
             })
         }
+    }
+
+    /**
+     Checks whether the given URL is allowed based on the 'AllowedDomains' preference.
+     If the allowed domains list is empty, all URLs are permitted.
+     Matching supports exact domain and subdomains (e.g. "outsystems.com" also allows "docs.outsystems.com").
+     - Parameter url: The URL to validate.
+     - Returns: `true` if the URL is allowed, `false` otherwise.
+     */
+    func isUrlAllowed(_ url: URL) -> Bool {
+        guard !allowedDomains.isEmpty else { return true }
+        guard let host = url.host?.lowercased() else { 
+            print("OSInAppBrowser WARNING: Access blocked to URL '\(url.absoluteString)'. Could not parse host.")
+            return false 
+        }
+        let isAllowed = allowedDomains.contains { allowed in
+            host == allowed || host.hasSuffix(".\(allowed)")
+        }
+        if !isAllowed {
+            print("OSInAppBrowser WARNING: Access blocked to URL '\(url.absoluteString)'. The domain is not in the AllowedDomains list.")
+        }
+        return isAllowed
     }
     
     func handleResult(_ event: OSIABEventType, for callbackId: String, checking viewController: UIViewController?, data: Any?, error: OSInAppBrowserError) {

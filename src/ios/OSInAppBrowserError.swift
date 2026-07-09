@@ -8,6 +8,7 @@ enum OSInAppBrowserError: Error {
     case inputArgumentsIssue(target: OSInAppBrowserTarget)
     case failedToOpen(url: String, onTarget: OSInAppBrowserTarget)
     case noBrowserToClose
+    case domainNotAllowed(url: String)
     
     private var code: Int {
         return switch self {
@@ -24,6 +25,7 @@ enum OSInAppBrowserError: Error {
             case .webView: 11
             }
         case .noBrowserToClose: 12
+        case .domainNotAllowed: 13
         }
     }
     
@@ -49,6 +51,8 @@ enum OSInAppBrowserError: Error {
             result = "\(targetString) couldn't open the following URL: '\(url)'"
         case .noBrowserToClose:
             result = "There's no browser view to close."
+        case .domainNotAllowed(let url):
+            result = "The URL '\(url)' cannot be opened because its domain is not in the AllowedDomains list."
         }
         
         return result
