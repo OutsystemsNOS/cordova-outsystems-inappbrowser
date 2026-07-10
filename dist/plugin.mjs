@@ -1,4 +1,4 @@
-import { require as require2 } from "cordova";
+import { require as require$1 } from "cordova";
 var ToolbarPosition = /* @__PURE__ */ ((ToolbarPosition2) => {
   ToolbarPosition2[ToolbarPosition2["TOP"] = 0] = "TOP";
   ToolbarPosition2[ToolbarPosition2["BOTTOM"] = 1] = "BOTTOM";
@@ -86,7 +86,7 @@ const DefaultSystemBrowserOptions = {
   android: DefaultAndroidSystemBrowserOptions,
   iOS: DefaultiOSSystemBrowserOptions
 };
-var exec = require2("cordova/exec");
+var exec = require$1("cordova/exec");
 function trigger(type, success, data, onbrowserClosed = void 0, onbrowserPageLoaded = void 0, onbrowserPageNavigationCompleted = void 0) {
   switch (type) {
     case CallbackEventType.SUCCESS:
@@ -109,6 +109,11 @@ function trigger(type, success, data, onbrowserClosed = void 0, onbrowserPageLoa
       break;
   }
 }
+function logErrorIfBlocked(err) {
+  if (err && err.code === "OS-PLUG-IABP-0013") {
+    console.error("OSInAppBrowser: Blocked loading URL because its domain is not allowed by AllowedDomains configuration.", err);
+  }
+}
 function openInWebView(url, options, success, error, browserCallbacks) {
   options = options || DefaultWebViewOptions;
   let triggerCorrectCallback = function(result) {
@@ -121,7 +126,11 @@ function openInWebView(url, options, success, error, browserCallbacks) {
       }
     }
   };
-  exec(triggerCorrectCallback, error, "OSInAppBrowser", "openInWebView", [{ url, options }]);
+  let handleError = function(err) {
+    logErrorIfBlocked(err);
+    error(err);
+  };
+  exec(triggerCorrectCallback, handleError, "OSInAppBrowser", "openInWebView", [{ url, options }]);
 }
 function openInSystemBrowser(url, options, success, error, browserCallbacks) {
   options = options || DefaultSystemBrowserOptions;
@@ -135,10 +144,18 @@ function openInSystemBrowser(url, options, success, error, browserCallbacks) {
       }
     }
   };
-  exec(triggerCorrectCallback, error, "OSInAppBrowser", "openInSystemBrowser", [{ url, options }]);
+  let handleError = function(err) {
+    logErrorIfBlocked(err);
+    error(err);
+  };
+  exec(triggerCorrectCallback, handleError, "OSInAppBrowser", "openInSystemBrowser", [{ url, options }]);
 }
 function openInExternalBrowser(url, success, error) {
-  exec(success, error, "OSInAppBrowser", "openInExternalBrowser", [{ url }]);
+  let handleError = function(err) {
+    logErrorIfBlocked(err);
+    error(err);
+  };
+  exec(success, handleError, "OSInAppBrowser", "openInExternalBrowser", [{ url }]);
 }
 function close(success, error) {
   exec(success, error, "OSInAppBrowser", "close", [{}]);

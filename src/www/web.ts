@@ -27,6 +27,12 @@ function trigger(type: CallbackEventType, success: () => void, data?: any, onbro
   }
 }
 
+function logErrorIfBlocked(err: PluginError): void {
+  if (err && err.code === "OS-PLUG-IABP-0013") {
+    console.error("OSInAppBrowser: Blocked loading URL because its domain is not allowed by AllowedDomains configuration.", err);
+  }
+}
+
 function openInWebView(url: string, options: WebViewOptions,  success: () => void, error: (error: PluginError) => void,  browserCallbacks?: BrowserCallbacks): void {
   options = options || DefaultWebViewOptions;
   
@@ -41,7 +47,12 @@ function openInWebView(url: string, options: WebViewOptions,  success: () => voi
     }
   };
 
-  exec(triggerCorrectCallback, error, 'OSInAppBrowser', 'openInWebView', [{url, options}]);
+  let handleError = function (err: PluginError) {
+    logErrorIfBlocked(err);
+    error(err);
+  };
+
+  exec(triggerCorrectCallback, handleError, 'OSInAppBrowser', 'openInWebView', [{url, options}]);
 }
 
 function openInSystemBrowser(url: string, options: SystemBrowserOptions, success: () => void, error: (error: PluginError) => void, browserCallbacks?: BrowserCallbacks): void {
@@ -58,11 +69,20 @@ function openInSystemBrowser(url: string, options: SystemBrowserOptions, success
     }
   };
 
-  exec(triggerCorrectCallback, error, 'OSInAppBrowser', 'openInSystemBrowser', [{url, options}]);
+  let handleError = function (err: PluginError) {
+    logErrorIfBlocked(err);
+    error(err);
+  };
+
+  exec(triggerCorrectCallback, handleError, 'OSInAppBrowser', 'openInSystemBrowser', [{url, options}]);
 }
 
 function openInExternalBrowser(url: string, success: () => void, error: (error: PluginError) => void): void {
-  exec(success, error, 'OSInAppBrowser', 'openInExternalBrowser', [{url}])
+  let handleError = function (err: PluginError) {
+    logErrorIfBlocked(err);
+    error(err);
+  };
+  exec(success, handleError, 'OSInAppBrowser', 'openInExternalBrowser', [{url}])
 }
 
 function close(success: () => void, error: (error: PluginError) => void): void {
@@ -75,3 +95,4 @@ module.exports = {
   openInSystemBrowser,
   close
 }
+

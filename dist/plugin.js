@@ -112,6 +112,11 @@
         break;
     }
   }
+  function logErrorIfBlocked(err) {
+    if (err && err.code === "OS-PLUG-IABP-0013") {
+      console.error("OSInAppBrowser: Blocked loading URL because its domain is not allowed by AllowedDomains configuration.", err);
+    }
+  }
   function openInWebView(url, options, success, error, browserCallbacks) {
     options = options || DefaultWebViewOptions;
     let triggerCorrectCallback = function(result) {
@@ -124,7 +129,11 @@
         }
       }
     };
-    exec(triggerCorrectCallback, error, "OSInAppBrowser", "openInWebView", [{ url, options }]);
+    let handleError = function(err) {
+      logErrorIfBlocked(err);
+      error(err);
+    };
+    exec(triggerCorrectCallback, handleError, "OSInAppBrowser", "openInWebView", [{ url, options }]);
   }
   function openInSystemBrowser(url, options, success, error, browserCallbacks) {
     options = options || DefaultSystemBrowserOptions;
@@ -138,10 +147,18 @@
         }
       }
     };
-    exec(triggerCorrectCallback, error, "OSInAppBrowser", "openInSystemBrowser", [{ url, options }]);
+    let handleError = function(err) {
+      logErrorIfBlocked(err);
+      error(err);
+    };
+    exec(triggerCorrectCallback, handleError, "OSInAppBrowser", "openInSystemBrowser", [{ url, options }]);
   }
   function openInExternalBrowser(url, success, error) {
-    exec(success, error, "OSInAppBrowser", "openInExternalBrowser", [{ url }]);
+    let handleError = function(err) {
+      logErrorIfBlocked(err);
+      error(err);
+    };
+    exec(success, handleError, "OSInAppBrowser", "openInExternalBrowser", [{ url }]);
   }
   function close(success, error) {
     exec(success, error, "OSInAppBrowser", "close", [{}]);
