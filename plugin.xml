@@ -9,7 +9,7 @@
         Subdomains are automatically permitted (e.g. "outsystems.com" also allows "docs.outsystems.com").
         Leave empty (default) to allow all domains.
     -->
-    <preference name="AllowedDomains" default="" />
+    <preference name="ALLOWED_DOMAINS" default="" />
     
     <js-module name="OSInAppBrowser" src="dist/plugin.js">
         <clobbers target="cordova.plugins.OSInAppBrowser" />
@@ -25,7 +25,7 @@
             <preference name="GradlePluginKotlinEnabled" value="true" />
             <preference name="GradlePluginKotlinCodeStyle" value="official" />
             <preference name="AndroidXEnabled" value="true"/>
-            <preference name="AllowedDomains" value="$ALLOWEDDOMAINS" />
+            <preference name="AllowedDomains" value="$ALLOWED_DOMAINS" />
         </config-file>
         
         <config-file parent="/*" target="AndroidManifest.xml" />
@@ -44,7 +44,7 @@
                 <param name="ios-package" value="OSInAppBrowser" />
             </feature>
             <preference name="SwiftVersion" value="5" />
-            <preference name="AllowedDomains" value="$ALLOWEDDOMAINS" />
+            <preference name="AllowedDomains" value="$ALLOWED_DOMAINS" />
         </config-file>
 
         <source-file src="src/ios/OSInAppBrowser.swift" />
