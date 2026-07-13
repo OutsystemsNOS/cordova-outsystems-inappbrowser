@@ -28,8 +28,15 @@ function trigger(type: CallbackEventType, success: () => void, data?: any, onbro
 }
 
 function logErrorIfBlocked(err: PluginError): void {
-  if (err && err.code === "OS-PLUG-IABP-0013") {
+  if (err && err.code === "99") {
     console.error("OSInAppBrowser: Blocked loading URL because its domain is not allowed by AllowedDomains configuration.", err);
+    
+    if (window.inAppBrowserSync?.triggerOnBlockedUrlEvent) {
+        window.inAppBrowserSync.triggerOnBlockedUrlEvent({
+            code: err.code,
+            message: err.message || "Domain not allowed by AllowedDomains configuration."
+        });
+    }
   }
 }
 
