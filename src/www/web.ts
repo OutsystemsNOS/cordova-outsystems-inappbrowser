@@ -33,8 +33,8 @@ function logErrorIfBlocked(err: PluginError): void {
     
     if (window.inAppBrowserSync?.triggerOnBlockedUrlEvent) {
         window.inAppBrowserSync.triggerOnBlockedUrlEvent({
-            code: err.code,
-            message: err.message || "Domain not allowed by AllowedDomains configuration."
+            ErrorCode: err.code,
+            ErrorMessage: err.message || "Domain not allowed by AllowedDomains configuration."
         });
     }
   }
